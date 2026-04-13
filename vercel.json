@@ -1,5 +1,5 @@
 {
-  "rootDirectory": "frontend",
-  "buildCommand": "node node_modules/vite/bin/vite.js build",
-  "outputDirectory": "dist"
+  "buildCommand": "cd frontend && npm install && node node_modules/vite/bin/vite.js build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "cd frontend && npm install"
 }
