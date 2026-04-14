@@ -187,41 +187,46 @@ const Icon = ({ name, size = 18, color = "currentColor" }) => {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={p[name] || p.star} /></svg>;
 };
-
 // ─── AUTH PAGES ───────────────────────────────────────────────────────────────
-const handleSubmit = async (e) => {
-  e.preventDefault(); setLoading(true); setError("");
-  try {
-    const r = await fetch(`${API}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: form.email, password: form.password }),
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || "Login failed");
-    login({ ...d.user, token: d.token });
-  } catch (err) {
-    setError(err.message);
-  }
-  setLoading(false);
-};
-return (
-  <div className="auth-page">
-    <div className="auth-brand"><div className="brand-logo"><Icon name="brain" size={28} color="#fff" /></div><span className="brand-name">ResumeAI<sup>ML</sup></span></div>
-    <div className="auth-card">
-      <h2>Welcome back</h2>
-      <p className="auth-sub">Sign in to continue building your AI/ML career</p>
-      {error && <div className="alert alert-error">{error}</div>}
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-group"><label>Email</label><input type="email" placeholder="you@university.edu" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
-        <div className="form-group"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-        <button type="submit" className="btn-primary btn-full" disabled={loading}>{loading ? <span className="spinner" /> : "Sign In"}</button>
-      </form>
-      <p className="auth-switch">New here? <button onClick={onSwitch} className="link-btn">Create an account</button></p>
-      <div className="auth-demo"><button className="btn-ghost btn-full" onClick={() => login({ email: "demo@aiml.dev", name: "Demo Student", id: 1 })}><Icon name="zap" size={14} /> Try Demo (no signup needed)</button></div>
+function LoginPage({ onSwitch }) {
+  const { login } = useAuth();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const handleSubmit = async (e) => {
+    e.preventDefault(); setLoading(true); setError("");
+    try {
+      const r = await fetch(`${API}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Login failed");
+      login({ ...d.user, token: d.token });
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+  return (
+    <div className="auth-page">
+      <div className="auth-brand"><div className="brand-logo"><Icon name="brain" size={28} color="#fff" /></div><span className="brand-name">ResumeAI<sup>ML</sup></span></div>
+      <div className="auth-card">
+        <h2>Welcome back</h2>
+        <p className="auth-sub">Sign in to continue building your AI/ML career</p>
+        {error && <div className="alert alert-error">{error}</div>}
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group"><label>Email</label><input type="email" placeholder="you@university.edu" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
+          <div className="form-group"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
+          <button type="submit" className="btn-primary btn-full" disabled={loading}>{loading ? <span className="spinner" /> : "Sign In"}</button>
+        </form>
+        <p className="auth-switch">New here? <button onClick={onSwitch} className="link-btn">Create an account</button></p>
+        <div className="auth-demo"><button className="btn-ghost btn-full" onClick={() => login({ email: "demo@aiml.dev", name: "Demo Student", id: 1 })}><Icon name="zap" size={14} /> Try Demo (no signup needed)</button></div>
+      </div>
     </div>
-  </div>
-);
+  );
+}
 function SignupPage({ onSwitch }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
