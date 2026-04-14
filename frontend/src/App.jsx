@@ -226,6 +226,7 @@ function SignupPage({ onSwitch }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError("");
     try {
