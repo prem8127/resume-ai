@@ -149,13 +149,18 @@ function ResumeProvider({ children }) {
 }
 
 // ─── AI ───────────────────────────────────────────────────────────────────────
+const API = "https://resume-ai-rwpt.onrender.com";
+
 async function callAI(prompt, sys = "") {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: sys || "You are an expert AI/ML career coach and resume writer.", messages: [{ role: "user", content: prompt }] }),
+  const token = JSON.parse(localStorage.getItem("resume_user") || "{}")?.token;
+  const r = await fetch(`${API}/api/ai/improve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ text: prompt, type: "bullet", context: sys }),
   });
   const d = await r.json();
-  return d.content?.[0]?.text || "";
+  if (d.error) throw new Error(d.error);
+  return d.improved || "";
 }
 
 // ─── ICONS ────────────────────────────────────────────────────────────────────
@@ -184,42 +189,59 @@ const Icon = ({ name, size = 18, color = "currentColor" }) => {
 };
 
 // ─── AUTH PAGES ───────────────────────────────────────────────────────────────
-function LoginPage({ onSwitch }) {
-  const { login } = useAuth();
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const handleSubmit = (e) => {
-    e.preventDefault(); setLoading(true); setError("");
-    setTimeout(() => {
-      if (form.email && form.password.length >= 6) login({ email: form.email, name: form.email.split("@")[0], id: Date.now() });
-      else setError("Invalid credentials. Password must be 6+ characters.");
-      setLoading(false);
-    }, 800);
-  };
-  return (
-    <div className="auth-page">
-      <div className="auth-brand"><div className="brand-logo"><Icon name="brain" size={28} color="#fff" /></div><span className="brand-name">ResumeAI<sup>ML</sup></span></div>
-      <div className="auth-card">
-        <h2>Welcome back</h2>
-        <p className="auth-sub">Sign in to continue building your AI/ML career</p>
-        {error && <div className="alert alert-error">{error}</div>}
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group"><label>Email</label><input type="email" placeholder="you@university.edu" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
-          <div className="form-group"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
-          <button type="submit" className="btn-primary btn-full" disabled={loading}>{loading ? <span className="spinner" /> : "Sign In"}</button>
-        </form>
-        <p className="auth-switch">New here? <button onClick={onSwitch} className="link-btn">Create an account</button></p>
-        <div className="auth-demo"><button className="btn-ghost btn-full" onClick={() => login({ email: "demo@aiml.dev", name: "Demo Student", id: 1 })}><Icon name="zap" size={14} /> Try Demo (no signup needed)</button></div>
-      </div>
+const handleSubmit = async (e) => {
+  e.preventDefault(); setLoading(true); setError("");
+  try {
+    const r = await fetch(`${API}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: form.email, password: form.password }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Login failed");
+    login({ ...d.user, token: d.token });
+  } catch (err) {
+    setError(err.message);
+  }
+  setLoading(false);
+};
+return (
+  <div className="auth-page">
+    <div className="auth-brand"><div className="brand-logo"><Icon name="brain" size={28} color="#fff" /></div><span className="brand-name">ResumeAI<sup>ML</sup></span></div>
+    <div className="auth-card">
+      <h2>Welcome back</h2>
+      <p className="auth-sub">Sign in to continue building your AI/ML career</p>
+      {error && <div className="alert alert-error">{error}</div>}
+      <form onSubmit={handleSubmit} className="auth-form">
+        <div className="form-group"><label>Email</label><input type="email" placeholder="you@university.edu" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
+        <div className="form-group"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
+        <button type="submit" className="btn-primary btn-full" disabled={loading}>{loading ? <span className="spinner" /> : "Sign In"}</button>
+      </form>
+      <p className="auth-switch">New here? <button onClick={onSwitch} className="link-btn">Create an account</button></p>
+      <div className="auth-demo"><button className="btn-ghost btn-full" onClick={() => login({ email: "demo@aiml.dev", name: "Demo Student", id: 1 })}><Icon name="zap" size={14} /> Try Demo (no signup needed)</button></div>
     </div>
-  );
-}
+  </div>
+);
 function SignupPage({ onSwitch }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const handleSubmit = (e) => { e.preventDefault(); setLoading(true); setTimeout(() => { login({ email: form.email, name: form.name, id: Date.now() }); setLoading(false); }, 800); };
+  const handleSubmit = async (e) => {
+    e.preventDefault(); setLoading(true); setError("");
+    try {
+      const r = await fetch(`${API}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Registration failed");
+      login({ ...d.user, token: d.token });
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
   return (
     <div className="auth-page">
       <div className="auth-brand"><div className="brand-logo"><Icon name="brain" size={28} color="#fff" /></div><span className="brand-name">ResumeAI<sup>ML</sup></span></div>
