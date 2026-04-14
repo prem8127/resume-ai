@@ -6,19 +6,19 @@
 import express from "express";
 import puppeteer from "puppeteer";
 import { protect } from "../middleware/auth.js";
-import { Resume } from "../models/models.js";
+import { prisma } from "../server.js";
 
 const router = express.Router();
 router.use(protect);
 
-// ── POST /api/export/pdf ──────────────────────────────────────────────────────
 router.post("/pdf", async (req, res) => {
   try {
     const { resumeId, htmlContent } = req.body;
 
-    // Verify ownership if resumeId provided
     if (resumeId) {
-      const resume = await Resume.findOne({ _id: resumeId, userId: req.user._id });
+      const resume = await prisma.resume.findFirst({
+        where: { id: resumeId, userId: req.user.id },
+      });
       if (!resume) return res.status(404).json({ error: "Resume not found" });
     }
 
@@ -28,7 +28,6 @@ router.post("/pdf", async (req, res) => {
     });
     const page = await browser.newPage();
 
-    // Set full page HTML with Google Fonts
     await page.setContent(
       `<!DOCTYPE html>
        <html>

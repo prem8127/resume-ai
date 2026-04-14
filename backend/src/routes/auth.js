@@ -4,12 +4,12 @@
 
 import express from "express";
 import jwt from "jsonwebtoken";
-import { User } from "../models/models.js";
+import bcrypt from "bcryptjs";
+import { prisma } from "../server.js";
 import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Helper: generate token
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
@@ -23,13 +23,17 @@ router.post("/register", async (req, res) => {
     if (password.length < 6)
       return res.status(400).json({ error: "Password must be at least 6 characters" });
 
-    const existing = await User.findOne({ email });
+    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing)
       return res.status(409).json({ error: "Email already registered" });
 
-    const user = await User.create({ name, email, password });
-    const token = signToken(user._id);
+    const hashed = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: { name, email, password: hashed },
+      select: { id: true, name: true, email: true, plan: true, resumeCount: true, createdAt: true },
+    });
 
+    const token = signToken(user.id);
     res.status(201).json({ token, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -41,14 +45,15 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    const match = await user.comparePassword(password);
+    const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = signToken(user._id);
-    res.json({ token, user });
+    const { password: _, ...safeUser } = user;
+    const token = signToken(user.id);
+    res.json({ token, user: safeUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
